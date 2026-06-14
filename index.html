@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>MFFT Digital — Tes Gaya Kognitif</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f5f3;
+    color: #1a1a1a;
+    min-height: 100dvh;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+  .container { max-width: 500px; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* Header */
+  .page-header { text-align: center; margin-bottom: 1.5rem; padding-top: 0.5rem; }
+  .page-header .badge {
+    display: inline-block; font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+    text-transform: uppercase; padding: 4px 12px; border-radius: 20px;
+    background: #e6f1fb; color: #185fa5; margin-bottom: 10px;
+  }
+  .page-header h1 { font-size: 22px; font-weight: 600; margin-bottom: 6px; }
+  .page-header p { font-size: 14px; color: #555; }
+
+  /* Cards */
+  .card {
+    background: #fff; border: 1px solid #e5e5e2;
+    border-radius: 14px; padding: 1.1rem 1.1rem; margin-bottom: 1rem;
+  }
+  .card-title { font-size: 13px; font-weight: 600; color: #333; margin-bottom: 10px; }
+
+  /* Steps list */
+  .steps { display: flex; flex-direction: column; gap: 10px; }
+  .step-row { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; color: #444; }
+  .step-num {
+    width: 22px; height: 22px; border-radius: 50%; background: #e6f1fb;
+    color: #185fa5; font-size: 11px; font-weight: 700; display: flex;
+    align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;
+  }
+
+  /* Form inputs */
+  .input-group { margin-bottom: 0.85rem; }
+  .input-group:last-child { margin-bottom: 0; }
+  .input-group label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 5px; }
+  .input-group input {
+    width: 100%; padding: 10px 12px; font-size: 14px;
+    border: 1px solid #ddd; border-radius: 10px; background: #fafafa;
+    color: #1a1a1a; outline: none; transition: border-color 0.15s;
+  }
+  .input-group input:focus { border-color: #185fa5; background: #fff; }
+
+  /* Buttons */
+  .btn-primary {
+    width: 100%; padding: 13px; font-size: 15px; font-weight: 600;
+    background: #185fa5; color: #fff; border: none; border-radius: 12px;
+    cursor: pointer; transition: opacity 0.15s; margin-top: 0.5rem;
+  }
+  .btn-primary:hover { opacity: 0.88; }
+  .btn-secondary {
+    width: 100%; padding: 11px; font-size: 14px; font-weight: 500;
+    background: #fff; color: #333; border: 1px solid #ddd; border-radius: 12px;
+    cursor: pointer; transition: background 0.15s; margin-top: 0.75rem;
+  }
+  .btn-secondary:hover { background: #f5f5f3; }
+  .btn-download {
+    width: 100%; padding: 12px; font-size: 14px; font-weight: 600;
+    background: #1d9e75; color: #fff; border: none; border-radius: 12px;
+    cursor: pointer; transition: opacity 0.15s; margin-top: 0.75rem;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+  }
+  .btn-download:hover { opacity: 0.88; }
+  .btn-confirm {
+    width: 100%; padding: 12px; font-size: 14px; font-weight: 600;
+    background: #185fa5; color: #fff; border: none; border-radius: 12px;
+    cursor: pointer; transition: opacity 0.15s; margin-top: 0.75rem;
+  }
+  .btn-confirm:disabled { background: #ccc; cursor: not-allowed; }
+  .btn-confirm:not(:disabled):hover { opacity: 0.88; }
+
+  /* Progress */
+  .progress-wrap { margin-bottom: 1rem; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 12px; color: #777; margin-bottom: 5px; }
+  .progress-bar { height: 5px; background: #e5e5e2; border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; background: #185fa5; border-radius: 3px; transition: width 0.4s; }
+
+  /* Meta row */
+  .meta-row {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 13px; color: #555; margin-bottom: 0.6rem;
+  }
+  .meta-row .timer-badge {
+    background: #f5f5f3; border: 1px solid #e5e5e2; border-radius: 8px;
+    padding: 4px 10px; font-size: 14px; font-weight: 600; color: #1a1a1a;
+    font-variant-numeric: tabular-nums;
+  }
+  .meta-row .timer-badge.urgent { background: #fcebeb; border-color: #f09595; color: #a32d2d; }
+
+  /* Timer progress bar */
+  .timer-bar { height: 3px; background: #e5e5e2; border-radius: 2px; margin-bottom: 1rem; overflow: hidden; }
+  .timer-fill { height: 100%; background: #1d9e75; border-radius: 2px; transition: width 0.5s linear; }
+  .timer-fill.urgent { background: #e24b4a; }
+
+  /* Stimulus layout */
+  .stimulus-layout { display: flex; flex-direction: column; gap: 12px; }
+  .std-section { text-align: center; }
+  .section-label { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .img-placeholder {
+    background: #f0f0ed; border: 1.5px dashed #ccc; border-radius: 12px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: #aaa; font-size: 12px; gap: 4px;
+  }
+  .img-placeholder svg { width: 32px; height: 32px; opacity: 0.5; }
+  .std-img { width: 160px; height: 160px; margin: 0 auto; }
+  .std-img img { width: 100%; height: 100%; object-fit: contain; border-radius: 10px; display: block; }
+
+  .variants-label { font-size: 11px; font-weight: 600; color: #888; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+  .variants-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .variant-btn {
+    background: #fff; border: 1.5px solid #e0e0dd; border-radius: 10px;
+    padding: 6px 4px 4px; cursor: pointer; transition: border-color 0.15s, transform 0.1s;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .variant-btn:active { transform: scale(0.96); }
+  .variant-btn .v-img { width: 100%; aspect-ratio: 1; border-radius: 6px; overflow: hidden; }
+  .variant-btn .v-img img { width: 100%; height: 100%; object-fit: contain; }
+  .variant-btn .v-label { font-size: 11px; font-weight: 600; color: #777; }
+  .variant-btn.selected { border-color: #1d9e75; border-width: 2px; background: #f0faf6; }
+  .variant-btn.wrong { border-color: #e24b4a; border-width: 2px; background: #fff5f5; }
+  .variant-btn.correct-flash { border-color: #1d9e75; border-width: 2px; background: #f0faf6; }
+
+  /* Error badge */
+  .error-info {
+    display: none; align-items: center; gap: 6px;
+    font-size: 12px; color: #a32d2d; font-weight: 500;
+    background: #fcebeb; border-radius: 8px; padding: 5px 10px;
+    margin-top: 6px;
+  }
+  .error-info.show { display: flex; }
+
+  /* Hint */
+  .first-hint { font-size: 12px; color: #888; margin-top: 4px; display: none; }
+  .first-hint.show { display: block; }
+
+  /* Results */
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1rem; }
+  .stat-card { background: #f5f5f3; border-radius: 12px; padding: 0.85rem 1rem; }
+  .stat-label { font-size: 12px; color: #777; margin-bottom: 3px; }
+  .stat-val { font-size: 22px; font-weight: 700; color: #1a1a1a; }
+  .detail-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid #f0f0ed; font-size: 13px;
+  }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-row .item-name { color: #555; }
+  .detail-row .item-stats { display: flex; gap: 14px; }
+  .detail-row .lat { color: #185fa5; font-weight: 600; }
+  .detail-row .err-cnt { color: #e24b4a; font-weight: 600; }
+
+  /* Divider */
+  .divider { height: 1px; background: #f0f0ed; margin: 0.75rem 0; }
+
+  /* Note */
+  .note { font-size: 12px; color: #888; line-height: 1.6; margin-top: 0.5rem; }
+
+  /* Download icon inline */
+  .dl-icon { width: 18px; height: 18px; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ===== SCREEN: WELCOME ===== -->
+  <div id="s-welcome" class="screen active">
+    <div class="page-header">
+      <div class="badge">MFFT · Gaya Kognitif</div>
+      <h1>Tes Gaya Kognitif</h1>
+      <p>Matching Familiar Figures Test (MFFT)<br>Warli, 2010</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Petunjuk pengerjaan</div>
+      <div class="steps">
+        <div class="step-row"><div class="step-num">1</div><span>Kamu akan melihat <strong>1 gambar standar</strong> dan <strong>8 pilihan gambar</strong> di setiap soal.</span></div>
+        <div class="step-row"><div class="step-num">2</div><span>Pilih gambar yang <strong>paling mirip</strong> dengan gambar standar.</span></div>
+        <div class="step-row"><div class="step-num">3</div><span>Timer berjalan otomatis. <strong>Waktu respons pertamamu</strong> dicatat sebagai latensi.</span></div>
+        <div class="step-row"><div class="step-num">4</div><span>Jika jawabanmu salah, kamu boleh memilih ulang. <strong>Setiap kesalahan dicatat.</strong></span></div>
+        <div class="step-row"><div class="step-num">5</div><span>Total soal: <strong>13 item</strong>. Kerjakan dengan tenang, tidak ada batas waktu.</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Data diri</div>
+      <div class="input-group">
+        <label>Nama lengkap</label>
+        <input type="text" id="inp-name" placeholder="Tulis nama lengkapmu" autocomplete="off">
+      </div>
+      <div class="input-group">
+        <label>NIM / Kode partisipan</label>
+        <input type="text" id="inp-nim" placeholder="Contoh: 220123456" autocomplete="off">
+      </div>
+    </div>
+
+    <button class="btn-primary" onclick="startTest()">Mulai tes →</button>
+  </div>
+
+  <!-- ===== SCREEN: TRIAL ===== -->
+  <div id="s-trial" class="screen">
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span id="q-label">Soal 1 dari 13</span>
+        <span id="q-dots"></span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="prog-fill"></div></div>
+    </div>
+
+    <div class="meta-row">
+      <span style="font-weight:600">Item <span id="q-num">1</span></span>
+      <span class="timer-badge" id="timer-badge">0.0 s</span>
+    </div>
+    <div class="timer-bar"><div class="timer-fill" id="timer-fill"></div></div>
+
+    <div class="card">
+      <div class="stimulus-layout">
+        <div class="std-section">
+          <div class="section-label">Gambar standar</div>
+          <div class="std-img img-placeholder" id="std-container">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+            <span id="std-placeholder-label">Gambar soal</span>
+          </div>
+        </div>
+
+        <div>
+          <div class="variants-label">Pilih yang paling mirip ↓</div>
+          <div class="variants-grid" id="variants-grid"></div>
+        </div>
+      </div>
+
+      <div class="error-info" id="error-info">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span>Jawaban salah — <span id="error-count">0</span> kali. Silakan pilih lagi.</span>
+      </div>
+      <div class="first-hint" id="first-hint">Latensi pertama tercatat: <strong id="first-time-display">–</strong></div>
+    </div>
+
+    <button class="btn-confirm" id="confirm-btn" disabled onclick="confirmAnswer()">Konfirmasi jawaban</button>
+  </div>
+
+  <!-- ===== SCREEN: RESULT ===== -->
+  <div id="s-result" class="screen">
+    <div class="page-header">
+      <div class="badge" style="background:#e1f5ee;color:#0f6e56">Selesai ✓</div>
+      <h1 id="res-name">Hasil Tes</h1>
+      <p id="res-nim" style="color:#777"></p>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card"><div class="stat-label">Rata-rata latensi</div><div class="stat-val" id="avg-lat">–</div></div>
+      <div class="stat-card"><div class="stat-label">Total kesalahan</div><div class="stat-val" id="total-err">–</div></div>
+      <div class="stat-card"><div class="stat-label">Latensi tercepat</div><div class="stat-val" id="min-lat">–</div></div>
+      <div class="stat-card"><div class="stat-label">Latensi terlambat</div><div class="stat-val" id="max-lat">–</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Detail per item</div>
+      <div id="detail-rows"></div>
+    </div>
+
+    <p class="note">Kategorisasi (reflektif / impulsif / fast accurate / slow inaccurate) dilakukan peneliti menggunakan nilai median latensi dan median error dari seluruh partisipan.</p>
+
+    <button class="btn-download" onclick="downloadCSV()">
+      <svg class="dl-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Unduh data CSV
+    </button>
+    <button class="btn-secondary" onclick="resetTest()">↩ Tes partisipan berikutnya</button>
+  </div>
+
+</div>
+
+<script>
+const ITEMS = [
+  { id:1,  label:"Item 1",  stdImg:"", variants:["","","","","","","",""], correct:3 },
+  { id:2,  label:"Item 2",  stdImg:"", variants:["","","","","","","",""], correct:5 },
+  { id:3,  label:"Item 3",  stdImg:"", variants:["","","","","","","",""], correct:1 },
+  { id:4,  label:"Item 4",  stdImg:"", variants:["","","","","","","",""], correct:7 },
+  { id:5,  label:"Item 5",  stdImg:"", variants:["","","","","","","",""], correct:2 },
+  { id:6,  label:"Item 6",  stdImg:"", variants:["","","","","","","",""], correct:4 },
+  { id:7,  label:"Item 7",  stdImg:"", variants:["","","","","","","",""], correct:6 },
+  { id:8,  label:"Item 8",  stdImg:"", variants:["","","","","","","",""], correct:8 },
+  { id:9,  label:"Item 9",  stdImg:"", variants:["","","","","","","",""], correct:3 },
+  { id:10, label:"Item 10", stdImg:"", variants:["","","","","","","",""], correct:5 },
+  { id:11, label:"Item 11", stdImg:"", variants:["","","","","","","",""], correct:2 },
+  { id:12, label:"Item 12", stdImg:"", variants:["","","","","","","",""], correct:7 },
+  { id:13, label:"Item 13", stdImg:"", variants:["","","","","","","",""], correct:4 }
+];
+
+let state = {
+  name:'', nim:'', cur:0, results:[],
+  timerInt:null, elapsed:0, firstTime:null, errors:0, chosen:null
+};
+
+function startTest() {
+  const n = document.getElementById('inp-name').value.trim();
+  const nim = document.getElementById('inp-nim').value.trim();
+  if (!n || !nim) { alert('Isi nama dan NIM terlebih dahulu ya.'); return; }
+  state.name = n;
+  state.nim = nim;
+  state.cur = 0;
+  state.results = [];
+  showScreen('s-trial');
+  loadItem();
+}
+
+function loadItem() {
+  const item = ITEMS[state.cur];
+  state.elapsed = 0;
+  state.firstTime = null;
+  state.errors = 0;
+  state.chosen = null;
+
+  // Progress
+  const pct = (state.cur / 13) * 100;
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('q-label').textContent = 'Soal ' + (state.cur+1) + ' dari 13';
+  document.getElementById('q-num').textContent = state.cur + 1;
+
+  // Timer reset
+  const timerBadge = document.getElementById('timer-badge');
+  timerBadge.textContent = '0.0 s';
+  timerBadge.classList.remove('urgent');
+  document.getElementById('timer-fill').style.width = '100%';
+  document.getElementById('timer-fill').classList.remove('urgent');
+
+  // Error + hint reset
+  document.getElementById('error-info').classList.remove('show');
+  document.getElementById('error-count').textContent = '0';
+  document.getElementById('first-hint').classList.remove('show');
+  document.getElementById('confirm-btn').disabled = true;
+
+  // Standard image
+  const stdContainer = document.getElementById('std-container');
+  stdContainer.classList.add('img-placeholder');
+  if (item.stdImg) {
+    stdContainer.innerHTML = '<img src="' + item.stdImg + '" alt="Gambar standar ' + item.label + '">';
+    stdContainer.classList.remove('img-placeholder');
+  } else {
+    stdContainer.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg><span>' + item.label + ' (placeholder)</span>';
+  }
+
+  // Variants grid
+  const grid = document.getElementById('variants-grid');
+  grid.innerHTML = '';
+  for (let v = 1; v <= 8; v++) {
+    const btn = document.createElement('button');
+    btn.className = 'variant-btn';
+    btn.dataset.v = v;
+    const letter = String.fromCharCode(64 + v); // A–H
+    if (item.variants[v-1]) {
+      btn.innerHTML = '<div class="v-img"><img src="' + item.variants[v-1] + '" alt="Pilihan ' + letter + '"></div><span class="v-label">' + letter + '</span>';
+    } else {
+      btn.innerHTML = '<div class="v-img img-placeholder" style="min-height:60px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:20px;height:20px;opacity:.4"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg></div><span class="v-label">' + letter + '</span>';
+    }
+    btn.addEventListener('click', () => selectVariant(v, btn, item.correct));
+    grid.appendChild(btn);
+  }
+
+  // Start timer
+  if (state.timerInt) clearInterval(state.timerInt);
+  const start = Date.now();
+  state.timerInt = setInterval(() => {
+    state.elapsed = (Date.now() - start) / 1000;
+    const badge = document.getElementById('timer-badge');
+    badge.textContent = state.elapsed.toFixed(1) + ' s';
+    if (state.elapsed > 60) { badge.classList.add('urgent'); }
+    const fill = document.getElementById('timer-fill');
+    const pct = Math.max(0, 100 - (state.elapsed / 120) * 100);
+    fill.style.width = pct + '%';
+    if (state.elapsed > 60) fill.classList.add('urgent');
+  }, 100);
+}
+
+function selectVariant(v, btn, correct) {
+  // Record first time
+  if (!state.firstTime) {
+    state.firstTime = parseFloat(state.elapsed.toFixed(2));
+    const hint = document.getElementById('first-hint');
+    document.getElementById('first-time-display').textContent = state.firstTime.toFixed(1) + ' detik';
+    hint.classList.add('show');
+  }
+
+  if (state.chosen === v) return;
+
+  // Reset all
+  document.querySelectorAll('.variant-btn').forEach(b => b.classList.remove('selected','wrong'));
+
+  if (v !== correct) {
+    state.errors++;
+    btn.classList.add('wrong');
+    const info = document.getElementById('error-info');
+    document.getElementById('error-count').textContent = state.errors;
+    info.classList.add('show');
+    document.getElementById('confirm-btn').disabled = true;
+  } else {
+    btn.classList.add('selected');
+    document.getElementById('confirm-btn').disabled = false;
+  }
+  state.chosen = v;
+}
+
+function confirmAnswer() {
+  clearInterval(state.timerInt);
+  const item = ITEMS[state.cur];
+  state.results.push({
+    item: item.id,
+    label: item.label,
+    latency: state.firstTime !== null ? state.firstTime : parseFloat(state.elapsed.toFixed(2)),
+    errors: state.errors
+  });
+  state.cur++;
+  if (state.cur < 13) {
+    loadItem();
+  } else {
+    showResult();
+  }
+}
+
+function showResult() {
+  showScreen('s-result');
+  document.getElementById('res-name').textContent = state.name;
+  document.getElementById('res-nim').textContent = 'NIM / Kode: ' + state.nim;
+
+  const lats = state.results.map(r => r.latency);
+  const errs = state.results.map(r => r.errors);
+  const avg = (lats.reduce((a,b) => a+b, 0) / lats.length).toFixed(2);
+  const tot = errs.reduce((a,b) => a+b, 0);
+  const mn = Math.min(...lats).toFixed(2);
+  const mx = Math.max(...lats).toFixed(2);
+
+  document.getElementById('avg-lat').textContent = avg + 's';
+  document.getElementById('total-err').textContent = tot;
+  document.getElementById('min-lat').textContent = mn + 's';
+  document.getElementById('max-lat').textContent = mx + 's';
+
+  const rows = document.getElementById('detail-rows');
+  rows.innerHTML = state.results.map(r => `
+    <div class="detail-row">
+      <span class="item-name">${r.label}</span>
+      <div class="item-stats">
+        <span class="lat">⏱ ${r.latency}s</span>
+        <span class="err-cnt">✗ ${r.errors}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function downloadCSV() {
+  const header = 'Nama,NIM,Item_ID,Label,Latensi_Pertama_s,Frekuensi_Error\n';
+  const rows = state.results.map(r =>
+    `${state.name},${state.nim},${r.item},"${r.label}",${r.latency},${r.errors}`
+  ).join('\n');
+  const blob = new Blob(['\uFEFF' + header + rows], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const ts = new Date().toISOString().slice(0,10);
+  a.download = `MFFT_${state.nim}_${state.name.replace(/\s+/g,'_')}_${ts}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function resetTest() {
+  if (state.timerInt) clearInterval(state.timerInt);
+  state = { name:'', nim:'', cur:0, results:[], timerInt:null, elapsed:0, firstTime:null, errors:0, chosen:null };
+  document.getElementById('inp-name').value = '';
+  document.getElementById('inp-nim').value = '';
+  showScreen('s-welcome');
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+</script>
+</body>
+</html>

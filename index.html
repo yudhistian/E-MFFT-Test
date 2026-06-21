@@ -304,6 +304,7 @@ let state = {
   phase: 'sim', // 'sim' or 'real'
   queue: [], cur: 0, results: [],
   timerInt:null, elapsed:0, firstTime:null, errors:0, chosen:null,
+  triedWrong: new Set(), // tracks unique wrong slots already counted for the current item
   shuffleMap: {} // per-item-label: array mapping displayed position(0-7) -> original variant number(1-8)
 };
 
@@ -379,6 +380,7 @@ function loadItem() {
   const label = state.queue[state.cur];
   const item = MFFT_DATA[label];
   state.elapsed = 0; state.firstTime = null; state.errors = 0; state.chosen = null;
+  state.triedWrong = new Set();
 
   const isSim = state.phase === 'sim';
   document.getElementById('sim-badge').style.display = isSim ? 'inline-block' : 'none';
@@ -440,7 +442,10 @@ function selectVariant(slot, btn, correctSlot, label) {
   document.querySelectorAll('.variant-btn').forEach(b => b.classList.remove('selected','wrong'));
 
   if (slot !== correctSlot) {
-    state.errors++;
+    if (!state.triedWrong.has(slot)) {
+      state.triedWrong.add(slot);
+      state.errors++;
+    }
     btn.classList.add('wrong');
     document.getElementById('error-info').classList.add('show');
     state.chosen = slot;
